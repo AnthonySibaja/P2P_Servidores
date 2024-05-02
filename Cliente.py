@@ -21,53 +21,46 @@ class P2PClient:
         videos = {}
         lines = data.split('\n')
         for line in lines:
-            if line.strip():
-                parts = line.split(' from ')
-                if len(parts) > 1:
-                    video_name, servers = parts[0], parts[1]
-                    videos[video_name] = servers.split(', ')
+            if line.strip():  # Ensure the line is not empty
+                video_name, rest = line.split(' available at ')
+                size_info, server_info = rest.split(' bytes ')
+                videos[video_name] = {'size': size_info, 'server': server_info}
         return videos
 
     def choose_video(self):
         """Permite al usuario seleccionar un vídeo para descargar."""
-        print("\nIngrese el nombre del vídeo que desea descargar:")
-        for video in self.videos:
-            print(video)
-        video_choice = input()
+        for video, info in self.videos.items():
+            print(f"{video} {info['size']} bytes available at {info['server']}")
+        video_choice = input("\nIngrese el nombre del vídeo que desea descargar: ")
         self.request_video_download(video_choice)
 
     def request_video_download(self, video_name):
         """Solicita la descarga de un vídeo específico y maneja la descarga de partes."""
         if video_name in self.videos:
-            servers = self.videos[video_name]
-            print(f"Descargando {video_name} de {len(servers)} servidores...")
-            self.download_video_parts(video_name, servers)
+            server_info = self.videos[video_name]['server']
+            print(f"Descargando {video_name} desde {server_info}...")
+            self.download_video_parts(video_name, server_info)
         else:
             print("Vídeo no encontrado.")
 
-    def download_video_parts(self, video_name, servers):
+    def download_video_parts(self, video_name, server_info):
         """Descarga partes del vídeo de diferentes servidores y muestra el progreso."""
-        video_data = []
-        for index, server in enumerate(servers):
-            host, port = server.split(':')
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                sock.connect((host, int(port)))
-                request = f"DOWNLOAD {video_name} {index + 1}"
-                sock.sendall(request.encode())
-                part_data = sock.recv(4096)
-                video_data.append(part_data)
-                print(f"Parte {index + 1} descargada de {host}. Tamaño: {len(part_data)} bytes.")
-        self.reassemble_video(video_name, video_data)
+        host, port = server_info.split(':')
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.connect((host, int(port)))
+            request = f"DOWNLOAD {video_name}"
+            sock.sendall(request.encode())
+            video_data = sock.recv(4096)
+            self.reassemble_video(video_name, video_data)
 
-    def reassemble_video(self, video_name, video_data_parts):
+    def reassemble_video(self, video_name, video_data):
         """Reensambla y guarda el vídeo completo en la carpeta 'video_Descargado'."""
         directory = "video_Descargado"
         if not os.path.exists(directory):
             os.makedirs(directory)
         video_path = os.path.join(directory, f"{video_name}_complete.mp4")
         with open(video_path, 'wb') as video_file:
-            for part_data in video_data_parts:
-                video_file.write(part_data)
+            video_file.write(video_data)
         print(f"Vídeo {video_name} descargado y reensamblado correctamente en {video_path}.")
 
 if __name__ == "__main__":
