@@ -80,9 +80,9 @@ class VideoServer:
             print(f"Failed to connect to main server for update: {e}")
 
 if __name__ == "__main__":
-    main_server_ip = input("Enter the main server IP: ")
-    main_server_port = int(input("Enter the main server port: "))
+    main_server_ip = '192.168.1.34'  # Dirección IP predefinida del servidor principal
+    main_server_port = 8000  # Puerto predefinido del servidor principal
     video_dir = input("Enter the path to the video directory: ")
-    port = int(input("Enter the port number to listen on: "))
+    port = 9000
     video_server = VideoServer(main_server_ip, main_server_port, video_dir, port=port)
     video_server.start()

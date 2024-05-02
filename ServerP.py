@@ -3,7 +3,7 @@ import threading
 import time
 
 class MainServer:
-    def __init__(self, host='192.168.100.125', port=8000):
+    def __init__(self, host='192.168.1.34', port=8000):
         self.host = host
         self.port = port
         self.active_video_servers = {}
@@ -76,6 +76,6 @@ class MainServer:
                     s.close()
 
 if __name__ == "__main__":
-    port = int(input("Enter the port number to listen on: "))
+    port = 8000
     main_server = MainServer(port=port)
     main_server.start()
