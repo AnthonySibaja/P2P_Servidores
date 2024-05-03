@@ -4,7 +4,7 @@ import os
 import time
 
 class VideoServer:
-    def __init__(self, server_ip, server_port, video_directory, host='192.168.50.197', port=7000):
+    def __init__(self, server_ip, server_port, video_directory, host='192.168.100.125', port=7000):
         self.host = host
         self.port = port
         self.server_ip = server_ip
@@ -57,6 +57,7 @@ class VideoServer:
                 print(f"Received data: {data} from {address}")
         client_socket.close()
 
+
     def send_video_part(self, data, client_socket):
         parts = data.split()
         video_name = parts[1]
@@ -78,7 +79,7 @@ class VideoServer:
                     if data:
                         client_socket.sendall(data)
                         start_byte += len(data)
-                    print(f"Sent {len(data)} bytes from part {part_index} of {video_name}")  # Debugging
+                    print(f"Sent {len(data)} bytes from part {part_index} of {video_name}") 
         else:
             print(f"Video file {video_name} not found.")
 
@@ -104,7 +105,7 @@ class VideoServer:
 
 if __name__ == "__main__":
     main_server_ip = '192.168.100.125'  
-    main_server_port = 8000  
+    main_server_port = 8001 
     video_dir = input("Enter the path to the video directory: ")
     port = 9000
     video_server = VideoServer(main_server_ip, main_server_port, video_dir, port=port)

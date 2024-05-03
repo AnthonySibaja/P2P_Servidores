@@ -3,7 +3,7 @@ import threading
 import os
 
 class P2PClient:
-    def __init__(self, server_ip='192.168.50.197', server_port=8000):
+    def __init__(self, server_ip='192.168.100.125', server_port=8001):
         self.server_ip = server_ip
         self.server_port = server_port
 
@@ -58,14 +58,13 @@ class P2PClient:
 
             print("Vídeo no encontrado.")
 
-    import socket
 
     def download_video_part(self, video_name, host, port, part, total_parts):
         request = f"DOWNLOAD {video_name} PART {part} OF {total_parts}"
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((host, port))
-                sock.settimeout(10)  # Establece un timeout de 10 segundos
+                sock.settimeout(10)  
                 sock.sendall(request.encode())
                 video_data = b''
                 print(f"Request sent: {request}")

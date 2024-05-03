@@ -3,10 +3,10 @@ import threading
 import time
 
 class MainServer:
-    def __init__(self, host='192.168.50.197', port=8000):
+    def __init__(self, host='192.168.100.125', port=8001):
         self.host = host
         self.port = port
-        self.active_video_servers = {}  # Diccionario para mapear vídeos a servidores
+        self.active_video_servers = {}
 
     def start(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -49,7 +49,6 @@ class MainServer:
         print(f"Video server {server_info} registered with videos: {videos}")
 
     def respond_to_query(self, client_socket):
-        """Envía la información de todos los vídeos disponibles a los clientes, incluyendo servidor y puerto."""
         video_info = "\n".join(
             f"{video} {server['details']['size']} bytes available at {server['host']}:{server['port']}"
             for video, servers in self.active_video_servers.items()
@@ -85,6 +84,6 @@ class MainServer:
                     del self.active_video_servers[video]
 
 if __name__ == "__main__":
-    port = 8000
+    port = 8001
     main_server = MainServer(port=port)
     main_server.start()

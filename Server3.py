@@ -4,7 +4,7 @@ import os
 import time
 
 class VideoServer:
-    def __init__(self, server_ip, server_port, video_directory, host='127.0.0.1', port=9000):
+    def __init__(self, server_ip, server_port, video_directory, host='127.0.0.2', port=7000):
         self.host = host
         self.port = port
         self.server_ip = server_ip
@@ -14,7 +14,6 @@ class VideoServer:
         self.server_active = True
 
     def load_videos(self):
-        """Carga los vídeos y devuelve una lista de tuplas con el nombre y tamaño de cada vídeo."""
         return [(f, os.path.getsize(os.path.join(self.video_directory, f)))
                 for f in os.listdir(self.video_directory) if os.path.isfile(os.path.join(self.video_directory, f))]
 
@@ -36,7 +35,6 @@ class VideoServer:
             self.socket.close()
 
     def register_with_main_server(self):
-        """Registers or updates the video list on the main server."""
         videos_info = " ".join(f"{name}:{size}" for name, size in self.videos)
         message = f"REGISTER {self.host}:{self.port} {videos_info}"
         try:
@@ -53,12 +51,39 @@ class VideoServer:
                 break
             if data == 'ping':
                 client_socket.sendall(b'pong')
+            elif data.startswith("DOWNLOAD"):
+                self.send_video_part(data, client_socket)
             else:
                 print(f"Received data: {data} from {address}")
         client_socket.close()
 
+
+    def send_video_part(self, data, client_socket):
+        parts = data.split()
+        video_name = parts[1]
+        part_index = int(parts[-3])
+        total_parts = int(parts[-1])
+
+        video_path = os.path.join(self.video_directory, video_name)
+        if os.path.exists(video_path):
+            file_size = os.path.getsize(video_path)
+            part_size = file_size // total_parts
+            start_byte = part_index * part_size
+            end_byte = start_byte + part_size if part_index < total_parts - 1 else file_size
+
+            with open(video_path, 'rb') as file:
+                file.seek(start_byte)
+                while start_byte < end_byte:
+                    bytes_to_read = min(4096, end_byte - start_byte)
+                    data = file.read(bytes_to_read)
+                    if data:
+                        client_socket.sendall(data)
+                        start_byte += len(data)
+                    print(f"Sent {len(data)} bytes from part {part_index} of {video_name}") 
+        else:
+            print(f"Video file {video_name} not found.")
+
     def monitor_video_directory(self):
-        """Monitors the video directory and updates the main server with any changes."""
         last_known_videos = set(self.videos)
         while True:
             current_videos = set(self.load_videos())
@@ -68,7 +93,6 @@ class VideoServer:
             time.sleep(10)
 
     def update_main_server_with_videos(self, videos):
-        """Sends updates to the main server about the list of available videos."""
         videos_info = " ".join(f"{name}:{size}" for name, size in videos)
         message = f"UPDATE {self.host}:{self.port} {videos_info}"
         try:
@@ -81,7 +105,7 @@ class VideoServer:
 
 if __name__ == "__main__":
     main_server_ip = '192.168.100.125'  
-    main_server_port = 8000  
+    main_server_port = 8001 
     video_dir = input("Enter the path to the video directory: ")
     port = 9000
     video_server = VideoServer(main_server_ip, main_server_port, video_dir, port=port)
