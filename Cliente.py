@@ -3,7 +3,7 @@ import threading
 import os
 
 class P2PClient:
-    def __init__(self, server_ip='192.168.100.125', server_port=8000):
+    def __init__(self, server_ip='192.168.50.197', server_port=8000):
         self.server_ip = server_ip
         self.server_port = server_port
 
@@ -58,23 +58,34 @@ class P2PClient:
 
             print("Vídeo no encontrado.")
 
+    import socket
+
     def download_video_part(self, video_name, host, port, part, total_parts):
         request = f"DOWNLOAD {video_name} PART {part} OF {total_parts}"
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.connect((host, port))
-            sock.sendall(request.encode())
-            video_data = b''
-            print("entra")
-            while True:
-                data = sock.recv(4096)
-                if not data:
-                    break
-                video_data += data
-            part_path = f"video_Descargado/{video_name}_part_{part}.mp4"
-            print(f"Received {len(video_data)} bytes for part {part}.")  # Debugging
-            with open(part_path, 'wb') as video_file:
-                video_file.write(video_data)
-
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.connect((host, port))
+                sock.settimeout(10)  # Establece un timeout de 10 segundos
+                sock.sendall(request.encode())
+                video_data = b''
+                print(f"Request sent: {request}")
+                while True:
+                    try:
+                        data = sock.recv(4096)
+                        if not data:
+                            break
+                        video_data += data
+                    except socket.timeout:
+                        print("Socket timed out while receiving data.")
+                        break
+                part_path = f"video_Descargado/{video_name}_part_{part}.mp4"
+                print(f"Received {len(video_data)} bytes for part {part}. Saving to {part_path}")
+                with open(part_path, 'wb') as video_file:
+                    video_file.write(video_data)
+        except socket.error as e:
+            print(f"Socket error: {e}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     def reassemble_video(self, video_name, total_parts):
         final_path = f"video_Descargado/{video_name}.mp4"
