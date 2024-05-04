@@ -4,7 +4,7 @@ import os
 import time
 
 class VideoServer:
-    def __init__(self, server_ip, server_port, video_directory, host='127.0.0.2', port=7000):
+    def __init__(self, server_ip, server_port, video_directory, host='127.0.0.2', port=6000):
         self.host = host
         self.port = port
         self.server_ip = server_ip

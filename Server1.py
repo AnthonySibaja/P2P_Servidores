@@ -1,6 +1,7 @@
 import socket
 import threading
 import os
+import sys
 import time
 
 class VideoServer:
@@ -12,6 +13,7 @@ class VideoServer:
         self.video_directory = video_directory
         self.videos = self.load_videos()
         self.server_active = True
+        self.pong_count = 0  # Contador para visualizar los 'pong'
 
     def load_videos(self):
         return [(f, os.path.getsize(os.path.join(self.video_directory, f)))
@@ -28,10 +30,9 @@ class VideoServer:
         try:
             while self.server_active:
                 client_socket, address = self.socket.accept()
-                print(f"Connection from {address}")
                 threading.Thread(target=self.handle_client, args=(client_socket, address)).start()
         except KeyboardInterrupt:
-            print("Shutting down the server.")
+            print("\nShutting down the server.")
             self.socket.close()
 
     def register_with_main_server(self):
@@ -42,7 +43,7 @@ class VideoServer:
                 sock.connect((self.server_ip, self.server_port))
                 sock.sendall(message.encode())
         except Exception as e:
-            print(f"Failed to connect to main server: {e}")
+            print(f"\nFailed to connect to main server: {e}")
 
     def handle_client(self, client_socket, address):
         while True:
@@ -51,12 +52,17 @@ class VideoServer:
                 break
             if data == 'ping':
                 client_socket.sendall(b'pong')
+                self.display_pong_progress()
             elif data.startswith("DOWNLOAD"):
                 self.send_video_part(data, client_socket)
             else:
-                print(f"Received data: {data} from {address}")
+                print(f"\nReceived data: {data} from {address}")
         client_socket.close()
 
+    def display_pong_progress(self):
+        self.pong_count = (self.pong_count + 1) % 5
+        sys.stdout.write(f"\r{'Conexion' + '.' * self.pong_count}{' ' * (10 - self.pong_count)}")
+        sys.stdout.flush()
 
     def send_video_part(self, data, client_socket):
         parts = data.split()
@@ -83,6 +89,8 @@ class VideoServer:
         else:
             print(f"Video file {video_name} not found.")
 
+
+
     def monitor_video_directory(self):
         last_known_videos = set(self.videos)
         while True:
@@ -103,10 +111,11 @@ class VideoServer:
         except Exception as e:
             print(f"Failed to connect to main server for update: {e}")
 
+
 if __name__ == "__main__":
-    main_server_ip = '192.168.100.125'  
-    main_server_port = 8001 
-    video_dir = input("Enter the path to the video directory: ")
+    main_server_ip = '192.168.100.125'
+    main_server_port = 8001
+    video_dir = input("\nEnter the path to the video directory: ")
     port = 9000
     video_server = VideoServer(main_server_ip, main_server_port, video_dir, port=port)
     video_server.start()
