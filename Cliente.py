@@ -46,26 +46,36 @@ class P2PClient:
             servers = self.videos[video_name]['servers']
             num_servers = len(servers)
             progress_bars = self.gui.setup_progress_bars(video_name, num_servers)
+            threads = []
             for i, server_info in enumerate(servers):
                 host, port = server_info.split(':')
                 part_thread = threading.Thread(target=self.download_video_part, args=(video_name, host, int(port), i, num_servers, progress_bars[i]))
+                threads.append(part_thread)
                 part_thread.start()
+            for thread in threads:
+                thread.join()
+            self.reassemble_video(video_name, num_servers)
 
     def download_video_part(self, video_name, host, port, part, total_parts, progress_bar):
         request = f"DOWNLOAD {video_name} PART {part} OF {total_parts}"
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((host, port))
+                sock.settimeout(10)
                 sock.sendall(request.encode())
                 video_data = b''
                 while True:
-                    data = sock.recv(4096)
-                    if not data:
+                    try:
+                        data = sock.recv(4096)
+                        if not data:
+                            break
+                        video_data += data
+                        progress_bar['value'] += len(data)
+                        self.gui.root.update_idletasks()
+                    except socket.timeout:
+                        print("Socket timed out while receiving data.")
                         break
-                    video_data += data
-                    progress_bar['value'] += len(data)
-                    self.gui.root.update_idletasks()
-                part_path = f"{self.download_dir}/{video_name}_part_{part}.mp4"
+                part_path = f"{self.download_dir}/{video_name}part{part}.mp4"
                 with open(part_path, 'wb') as video_file:
                     video_file.write(video_data)
         except socket.error as e:
@@ -74,6 +84,7 @@ class P2PClient:
             print(f"An error occurred: {e}")
 
     def reassemble_video(self, video_name, total_parts):
+        print(f"hasta aqui")
         final_path = os.path.join(self.download_dir, f"{video_name}.mp4")
         if all(os.path.exists(os.path.join(self.download_dir, f"{video_name}_part_{i}.mp4")) for i in range(total_parts)):
             with open(final_path, 'wb') as final_video:
@@ -116,7 +127,7 @@ class VideoDownloaderGUI:
         for i in range(num_parts):
             label = tk.Label(top, text=f"Part {i + 1}/{num_parts}")
             label.pack()
-            progress = ttk.Progressbar(top, length=200, mode='determinate', maximum=1000)
+            progress = ttk.Progressbar(top, length  = 200, mode='determinate', maximum=1000)
             progress.pack()
             progress_bars.append(progress)
         return progress_bars
