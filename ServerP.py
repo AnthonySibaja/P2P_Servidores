@@ -3,7 +3,7 @@ import threading
 import time
 
 class MainServer:
-    def __init__(self, host='192.168.50.197', port=8000):
+    def __init__(self, host='192.168.1.34', port=8000):
         self.host = host
         self.port = port
         self.active_video_servers = {}  # Diccionario para mapear vídeos a servidores
