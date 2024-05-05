@@ -46,18 +46,24 @@ class P2PClient:
         if video_name in self.videos:
             servers = self.videos[video_name]['servers']
             num_servers = len(servers)
-            progress_bars = self.gui.setup_progress_bars(video_name, num_servers)
+            progress_bars, progress_window = self.gui.setup_progress_bars(video_name, num_servers)
+            download_info = {'total': 0, 'per_server': [0] * num_servers}
+            start_time = time.time()
+
             threads = []
             for i, server_info in enumerate(servers):
                 host, port = server_info.split(':')
-                part_thread = threading.Thread(target=self.download_video_part, args=(video_name, host, int(port), i, num_servers, progress_bars[i]))
+                part_thread = threading.Thread(target=self.download_video_part, args=(video_name, host, int(port), i, num_servers, progress_bars[i], download_info))
                 threads.append(part_thread)
                 part_thread.start()
+
             for thread in threads:
                 thread.join()
-            self.reassemble_video(video_name, num_servers)
 
-    def download_video_part(self, video_name, host, port, part, total_parts, progress_bar):
+            download_time = time.time() - start_time
+            self.reassemble_video(video_name, num_servers, progress_window, download_info, download_time)
+
+    def download_video_part(self, video_name, host, port, part, total_parts, progress_bar, download_info):
         request = f"DOWNLOAD {video_name} PART {part} OF {total_parts}"
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -72,8 +78,9 @@ class P2PClient:
                             break
                         video_data += data
                         progress_bar['value'] += len(data)
+                        download_info['total'] += len(data)
+                        download_info['per_server'][part] += len(data)
                         self.gui.root.update_idletasks()
-                        
                     except socket.timeout:
                         print("Socket timed out while receiving data.")
                         break
@@ -85,8 +92,7 @@ class P2PClient:
         except Exception as e:
             print(f"An error occurred: {e}")
 
-    def reassemble_video(self, video_name, total_parts):
-        
+    def reassemble_video(self, video_name, total_parts, progress_window, download_info, download_time):
         final_path = os.path.join(self.download_dir, f"{video_name}.mp4")
         if all(os.path.exists(os.path.join(self.download_dir, f"{video_name}_part_{i}.mp4")) for i in range(total_parts)):
             with open(final_path, 'wb') as final_video:
@@ -95,10 +101,20 @@ class P2PClient:
                     with open(part_path, 'rb') as part_file:
                         final_video.write(part_file.read())
                     os.remove(part_path)
-            messagebox.showinfo("Download Complete", f"Video {video_name} reconstructed and saved in {final_path}.")
             
+            progress_window.destroy()
+
+            download_info_text = (f"Nombre del Video: {video_name}\n"
+                                  f"Ruta: {final_path}\n"
+                                  f"Tiempo de Descarga: {download_time:.2f} segundos\n"
+                                  f"Tamaño Total: {download_info['total']} bytes\n"
+                                  f"Descarga por Servidor:\n" +
+                                  "\n".join([f"  Parte {i + 1}: {size} bytes" for i, size in enumerate(download_info['per_server'])]))
+
+            messagebox.showinfo("Download Complete", f"Video {video_name} reconstruido y guardado en {final_path}.\n\n{download_info_text}")
         else:
-            messagebox.showerror("Download Error", "Some parts of the video are missing, cannot reassemble the video.")
+            progress_window.destroy()
+            messagebox.showerror("Download Error", "Algunas partes del video faltan, no se puede reensamblar el video.")
 
 class VideoDownloaderGUI:
     def __init__(self, root):
@@ -128,12 +144,12 @@ class VideoDownloaderGUI:
         top = tk.Toplevel(self.root)
         top.title(f"Downloading {video_name}")
         for i in range(num_parts):
-            label = tk.Label(top, text=f"Part {i + 1}/{num_parts}")
+            label = tk.Label(top, text=f"Parte {i + 1}/{num_parts}")
             label.pack()
-            progress = ttk.Progressbar(top, length  = 200, mode='determinate', maximum=1000)
+            progress = ttk.Progressbar(top, length=200, mode='determinate', maximum=1000)
             progress.pack()
             progress_bars.append(progress)
-        return progress_bars
+        return progress_bars, top
 
 def main():
     root = tk.Tk()
