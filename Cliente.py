@@ -6,7 +6,7 @@ import os
 import time
 
 class P2PClient:
-    def __init__(self, gui, server_ip='192.168.50.197', server_port=8001):
+    def __init__(self, gui, server_ip='192.168.1.34', server_port=8001):
         self.gui = gui
         self.server_ip = server_ip
         self.server_port = server_port
@@ -94,7 +94,7 @@ class P2PClient:
             print(f"An error occurred: {e}")
 
     def reassemble_video(self, video_name, total_parts, progress_window, download_info, download_time):
-        final_path = os.path.join(self.download_dir, f"{video_name}.mp4")
+        final_path = os.path.join(self.download_dir, f"{video_name}")
         if all(os.path.exists(os.path.join(self.download_dir, f"{video_name}_part_{i}.mp4")) for i in range(total_parts)):
             with open(final_path, 'wb') as final_video:
                 for i in range(total_parts):

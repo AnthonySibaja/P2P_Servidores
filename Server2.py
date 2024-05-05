@@ -85,7 +85,6 @@ class VideoServer:
                     if data:
                         client_socket.sendall(data)
                         start_byte += len(data)
-                    print(f"Sent {len(data)} bytes from part {part_index} of {video_name}")  # Debugging
                 client_socket.sendall(END_OF_DATA_MARKER.encode())
         else:
             print(f"Video file {video_name} not found.")
@@ -112,7 +111,7 @@ class VideoServer:
 
 
 if __name__ == "__main__":
-    main_server_ip = '192.168.50.197'
+    main_server_ip = '192.168.1.34'
     main_server_port = 8001
     video_dir = input("\nEnter the path to the video directory: ")
     port = 9001
