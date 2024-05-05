@@ -11,7 +11,7 @@ class P2PClient:
         self.server_ip = server_ip
         self.server_port = server_port
         self.videos = {}
-        self.download_dir = 'video_Descargado'
+        self.download_dir = 'Descargas'
         if not os.path.exists(self.download_dir):
             os.makedirs(self.download_dir)
 
@@ -46,7 +46,19 @@ class P2PClient:
         if video_name in self.videos:
             servers = self.videos[video_name]['servers']
             num_servers = len(servers)
-            progress_bars, progress_window = self.gui.setup_progress_bars(video_name, num_servers)
+            total_size = int(self.videos[video_name]['size'])
+
+            # Calcula el tamaño esperado de cada parte.
+            sizes = [total_size // num_servers] * num_servers
+
+            # Ajusta el tamaño de la última parte si hay un resto.
+            remainder = total_size % num_servers
+            if remainder > 0:
+                sizes[-1] += remainder
+
+            # Pasa los tamaños al método `setup_progress_bars`.
+            progress_bars, progress_window = self.gui.setup_progress_bars(video_name, num_servers, sizes)
+
             download_info = {'total': 0, 'per_server': [0] * num_servers}
             start_time = time.time()
 
@@ -63,6 +75,7 @@ class P2PClient:
             download_time = time.time() - start_time
             self.reassemble_video(video_name, num_servers, progress_window, download_info, download_time)
 
+
     def download_video_part(self, video_name, host, port, part, total_parts, progress_bar, download_info):
         request = f"DOWNLOAD {video_name} PART {part} OF {total_parts}"
         END_OF_DATA_MARKER = "END_OF_DATA"
@@ -71,6 +84,7 @@ class P2PClient:
                 sock.connect((host, port))
                 sock.sendall(request.encode())
                 video_data = b''
+                total_bytes_received = 0
                 while True:
                     data = sock.recv(4096)
                     if END_OF_DATA_MARKER.encode() in data:
@@ -80,6 +94,7 @@ class P2PClient:
                     elif data:
                         video_data += data
                         progress_bar['value'] += len(data)
+                        total_bytes_received += len(data)
                         download_info['total'] += len(data)
                         download_info['per_server'][part] += len(data)
                         self.gui.root.update_idletasks()
@@ -92,6 +107,7 @@ class P2PClient:
             print(f"Socket error: {e}")
         except Exception as e:
             print(f"An error occurred: {e}")
+
 
     def reassemble_video(self, video_name, total_parts, progress_window, download_info, download_time):
         final_path = os.path.join(self.download_dir, f"{video_name}")
@@ -140,17 +156,18 @@ class VideoDownloaderGUI:
         else:
             messagebox.showwarning("Warning", "Please select a video to download.")
 
-    def setup_progress_bars(self, video_name, num_parts):
+    def setup_progress_bars(self, video_name, num_parts, sizes):
         progress_bars = []
         top = tk.Toplevel(self.root)
         top.title(f"Downloading {video_name}")
         for i in range(num_parts):
             label = tk.Label(top, text=f"Parte {i + 1}/{num_parts}")
             label.pack()
-            progress = ttk.Progressbar(top, length=200, mode='determinate', maximum=1000)
+            progress = ttk.Progressbar(top, length=200, mode='determinate', maximum=sizes[i])
             progress.pack()
             progress_bars.append(progress)
         return progress_bars, top
+
 
 def main():
     root = tk.Tk()
