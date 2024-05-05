@@ -113,7 +113,7 @@ class VideoServer:
 if __name__ == "__main__":
     main_server_ip = '192.168.1.34'
     main_server_port = 8001
-    video_dir = input("\nEnter the path to the video directory: ")
+    video_dir = "Servidor1"
     port = 9000
     video_server = VideoServer(main_server_ip, main_server_port, video_dir, port=port)
     video_server.start()

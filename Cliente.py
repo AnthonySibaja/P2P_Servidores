@@ -26,6 +26,11 @@ class P2PClient:
         except socket.error as e:
             messagebox.showerror("Connection Error", f"Error al conectar al servidor: {e}")
 
+    def start_auto_refresh(self, interval_ms=5000):
+        """Inicia la actualización automática de la lista de videos."""
+        threading.Thread(target=self.connect_to_server).start()
+        self.gui.root.after(interval_ms, self.start_auto_refresh)
+
     def parse_videos(self, data):
         videos = {}
         lines = data.split('\n')
@@ -48,15 +53,12 @@ class P2PClient:
             num_servers = len(servers)
             total_size = int(self.videos[video_name]['size'])
 
-            # Calcula el tamaño esperado de cada parte.
             sizes = [total_size // num_servers] * num_servers
 
-            # Ajusta el tamaño de la última parte si hay un resto.
             remainder = total_size % num_servers
             if remainder > 0:
                 sizes[-1] += remainder
 
-            # Pasa los tamaños al método `setup_progress_bars`.
             progress_bars, progress_window = self.gui.setup_progress_bars(video_name, num_servers, sizes)
 
             download_info = {'total': 0, 'per_server': [0] * num_servers}
@@ -74,7 +76,6 @@ class P2PClient:
 
             download_time = time.time() - start_time
             self.reassemble_video(video_name, num_servers, progress_window, download_info, download_time)
-
 
     def download_video_part(self, video_name, host, port, part, total_parts, progress_bar, download_info):
         request = f"DOWNLOAD {video_name} PART {part} OF {total_parts}"
@@ -107,7 +108,6 @@ class P2PClient:
             print(f"Socket error: {e}")
         except Exception as e:
             print(f"An error occurred: {e}")
-
 
     def reassemble_video(self, video_name, total_parts, progress_window, download_info, download_time):
         final_path = os.path.join(self.download_dir, f"{video_name}")
@@ -142,9 +142,15 @@ class VideoDownloaderGUI:
         self.treeview.heading('Size', text='Size')
         self.treeview.heading('Servers', text='Available on Servers')
         self.treeview.pack(fill=tk.BOTH, expand=True)
+
+        
+        #ttk.Button(self.root, text="Update Videos", command=self.update_videos).pack(expand=True)
         ttk.Button(self.root, text="Download Selected Video", command=self.download_selected).pack(expand=True)
 
     def display_videos(self, videos):
+        for item in self.treeview.get_children():
+            self.treeview.delete(item)
+
         for video, info in videos.items():
             self.treeview.insert('', 'end', iid=video, text=video, values=(info['size'], f"{len(info['servers'])} server(s)"))
 
@@ -155,6 +161,10 @@ class VideoDownloaderGUI:
             threading.Thread(target=lambda: self.client.request_video_download(video_name)).start()
         else:
             messagebox.showwarning("Warning", "Please select a video to download.")
+
+    def update_videos(self):
+        """Llamada manual para actualizar la lista de videos."""
+        threading.Thread(target=self.client.connect_to_server).start()
 
     def setup_progress_bars(self, video_name, num_parts, sizes):
         progress_bars = []
@@ -174,7 +184,10 @@ def main():
     gui = VideoDownloaderGUI(root)
     client = P2PClient(gui)
     gui.client = client
-    threading.Thread(target=client.connect_to_server).start()
+
+    # Inicia la actualización automática cada 5 segundos
+    client.start_auto_refresh(interval_ms=5000)
+
     root.mainloop()
 
 if __name__ == "__main__":
