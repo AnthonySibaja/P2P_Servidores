@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import socket
 import threading
 import os
+import time
 
 class P2PClient:
     def __init__(self, gui, server_ip='192.168.1.34', server_port=8000):
@@ -72,10 +73,11 @@ class P2PClient:
                         video_data += data
                         progress_bar['value'] += len(data)
                         self.gui.root.update_idletasks()
+                        
                     except socket.timeout:
                         print("Socket timed out while receiving data.")
                         break
-                part_path = f"{self.download_dir}/{video_name}part{part}.mp4"
+                part_path = f"{self.download_dir}/{video_name}_part_{part}.mp4"
                 with open(part_path, 'wb') as video_file:
                     video_file.write(video_data)
         except socket.error as e:
@@ -84,7 +86,7 @@ class P2PClient:
             print(f"An error occurred: {e}")
 
     def reassemble_video(self, video_name, total_parts):
-        print(f"hasta aqui")
+        
         final_path = os.path.join(self.download_dir, f"{video_name}.mp4")
         if all(os.path.exists(os.path.join(self.download_dir, f"{video_name}_part_{i}.mp4")) for i in range(total_parts)):
             with open(final_path, 'wb') as final_video:
@@ -94,6 +96,7 @@ class P2PClient:
                         final_video.write(part_file.read())
                     os.remove(part_path)
             messagebox.showinfo("Download Complete", f"Video {video_name} reconstructed and saved in {final_path}.")
+            
         else:
             messagebox.showerror("Download Error", "Some parts of the video are missing, cannot reassemble the video.")
 

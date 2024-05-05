@@ -103,7 +103,7 @@ class VideoServer:
             print(f"Failed to connect to main server for update: {e}")
 
 if __name__ == "__main__":
-    main_server_ip = '192.168.100.125'  
+    main_server_ip = '192.168.1.34'  
     main_server_port = 8000  
     video_dir = input("Enter the path to the video directory: ")
     port = 9000
