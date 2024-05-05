@@ -6,7 +6,7 @@ import os
 import time
 
 class P2PClient:
-    def __init__(self, gui, server_ip='192.168.1.34', server_port=8000):
+    def __init__(self, gui, server_ip='192.168.50.197', server_port=8001):
         self.gui = gui
         self.server_ip = server_ip
         self.server_port = server_port
@@ -65,24 +65,25 @@ class P2PClient:
 
     def download_video_part(self, video_name, host, port, part, total_parts, progress_bar, download_info):
         request = f"DOWNLOAD {video_name} PART {part} OF {total_parts}"
+        END_OF_DATA_MARKER = "END_OF_DATA"
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((host, port))
-                sock.settimeout(10)
                 sock.sendall(request.encode())
                 video_data = b''
                 while True:
-                    try:
-                        data = sock.recv(4096)
-                        if not data:
-                            break
+                    data = sock.recv(4096)
+                    if END_OF_DATA_MARKER.encode() in data:
+                        data = data[:data.find(END_OF_DATA_MARKER.encode())]
+                        video_data += data
+                        break
+                    elif data:
                         video_data += data
                         progress_bar['value'] += len(data)
                         download_info['total'] += len(data)
                         download_info['per_server'][part] += len(data)
                         self.gui.root.update_idletasks()
-                    except socket.timeout:
-                        print("Socket timed out while receiving data.")
+                    else:
                         break
                 part_path = f"{self.download_dir}/{video_name}_part_{part}.mp4"
                 with open(part_path, 'wb') as video_file:
