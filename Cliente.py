@@ -170,13 +170,28 @@ class VideoDownloaderGUI:
         progress_bars = []
         top = tk.Toplevel(self.root)
         top.title(f"Downloading {video_name}")
+
+        screen_width = top.winfo_screenwidth()
+        screen_height = top.winfo_screenheight()
+
+        estimated_width = 300  
+        estimated_height = 30 * num_parts + 50 
+
+        
+        pos_x = (screen_width // 2) - (estimated_width // 2)
+        pos_y = (screen_height // 2) - (estimated_height // 2)
+
+        top.geometry(f"{estimated_width}x{estimated_height}+{pos_x}+{pos_y}")
+
         for i in range(num_parts):
             label = tk.Label(top, text=f"Parte {i + 1}/{num_parts}")
             label.pack()
             progress = ttk.Progressbar(top, length=200, mode='determinate', maximum=sizes[i])
             progress.pack()
             progress_bars.append(progress)
+
         return progress_bars, top
+
 
 
 def main():
