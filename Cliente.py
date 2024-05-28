@@ -6,7 +6,7 @@ import os
 import time
 
 class P2PClient:
-    def __init__(self, gui, server_ip='192.168.1.34', server_port=8001):
+    def __init__(self, gui, server_ip='192.168.50.197', server_port=8001):
         self.gui = gui
         self.server_ip = server_ip
         self.server_port = server_port

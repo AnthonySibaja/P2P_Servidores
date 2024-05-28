@@ -3,9 +3,10 @@ import threading
 import os
 import sys
 import time
+import argparse
 
 class VideoServer:
-    def __init__(self, server_ip, server_port, video_directory, host='127.0.0.3', port=9002):
+    def __init__(self, server_ip, server_port, video_directory, host='127.0.0.1', port=9000):
         self.host = host
         self.port = port
         self.server_ip = server_ip
@@ -109,11 +110,21 @@ class VideoServer:
         except Exception as e:
             print(f"Failed to connect to main server for update: {e}")
 
-
 if __name__ == "__main__":
-    main_server_ip = '192.168.1.34'
-    main_server_port = 8001
-    video_dir = "Servidor3"
-    port = 9002
-    video_server = VideoServer(main_server_ip, main_server_port, video_dir, port=port)
+    parser = argparse.ArgumentParser(description="Video Server")
+    parser.add_argument("main_server_ip", type=str, help="IP address of the main server")
+    parser.add_argument("main_server_port", type=int, help="Port of the main server")
+    parser.add_argument("video_directory", type=str, help="Directory containing video files")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host IP address of the video server")
+    parser.add_argument("--port", type=int, default=9000, help="Port of the video server")
+
+    args = parser.parse_args()
+
+    video_server = VideoServer(
+        server_ip=args.main_server_ip,
+        server_port=args.main_server_port,
+        video_directory=args.video_directory,
+        host=args.host,
+        port=args.port
+    )
     video_server.start()
