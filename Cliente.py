@@ -44,7 +44,8 @@ class P2PClient:
                     server_info = parts[1]
                     if video_name not in videos:
                         videos[video_name] = {'size': video_size, 'servers': []}
-                    videos[video_name]['servers'].append(server_info)
+                    if server_info not in videos[video_name]['servers']:
+                        videos[video_name]['servers'].append(server_info)
         return videos
 
     def request_video_download(self, video_name):
@@ -152,7 +153,8 @@ class VideoDownloaderGUI:
             self.treeview.delete(item)
 
         for video, info in videos.items():
-            self.treeview.insert('', 'end', iid=video, text=video, values=(info['size'], f"{len(info['servers'])} server(s)"))
+            servers_info = ", ".join(info['servers'])
+            self.treeview.insert('', 'end', iid=video, text=video, values=(info['size'], servers_info))
 
     def download_selected(self):
         selected_item = self.treeview.selection()
@@ -191,8 +193,6 @@ class VideoDownloaderGUI:
             progress_bars.append(progress)
 
         return progress_bars, top
-
-
 
 def main():
     root = tk.Tk()

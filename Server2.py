@@ -1,3 +1,4 @@
+
 import socket
 import threading
 import os
@@ -108,7 +109,6 @@ class VideoServer:
                 print(f"Updated main server with new video list: {videos}")
         except Exception as e:
             print(f"Failed to connect to main server for update: {e}")
-
 
 if __name__ == "__main__":
     main_server_ip = '192.168.1.34'

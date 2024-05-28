@@ -109,7 +109,6 @@ class VideoServer:
         except Exception as e:
             print(f"Failed to connect to main server for update: {e}")
 
-
 if __name__ == "__main__":
     main_server_ip = '192.168.1.34'
     main_server_port = 8001
