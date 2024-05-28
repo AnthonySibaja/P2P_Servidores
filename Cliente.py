@@ -167,6 +167,7 @@ class VideoDownloaderGUI:
         popup = tk.Toplevel(self.root)
         popup.title(f"Select Servers for {video_name}")
 
+        # Calcular la posición para centrar la ventana emergente
         screen_width = popup.winfo_screenwidth()
         screen_height = popup.winfo_screenheight()
 
@@ -185,6 +186,16 @@ class VideoDownloaderGUI:
             chk.pack(anchor='w')
             server_vars.append(var)
 
+        def start_download():
+            selected_servers = [server for server, var in zip(servers, server_vars) if var.get()]
+            if selected_servers:
+                threading.Thread(target=lambda: self.client.request_video_download(video_name, selected_servers)).start()
+                popup.destroy()
+            else:
+                messagebox.showwarning("Warning", "Please select at least one server.")
+
+        ttk.Button(popup, text="Download", command=start_download).pack()
+
     def setup_progress_bars(self, video_name, num_parts, sizes):
         progress_bars = []
         top = tk.Toplevel(self.root)
@@ -196,7 +207,6 @@ class VideoDownloaderGUI:
         estimated_width = 300  
         estimated_height = 30 * num_parts + 50 
 
-        
         pos_x = (screen_width // 2) - (estimated_width // 2)
         pos_y = (screen_height // 2) - (estimated_height // 2)
 
