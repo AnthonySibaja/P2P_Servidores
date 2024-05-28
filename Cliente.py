@@ -48,9 +48,9 @@ class P2PClient:
                         videos[video_name]['servers'].append(server_info)
         return videos
 
-    def request_video_download(self, video_name):
+    def request_video_download(self, video_name, selected_servers):
         if video_name in self.videos:
-            servers = self.videos[video_name]['servers']
+            servers = selected_servers
             num_servers = len(servers)
             total_size = int(self.videos[video_name]['size'])
 
@@ -144,9 +144,7 @@ class VideoDownloaderGUI:
         self.treeview.heading('Servers', text='Available on Servers')
         self.treeview.pack(fill=tk.BOTH, expand=True)
 
-        
-        #ttk.Button(self.root, text="Update Videos", command=self.update_videos).pack(expand=True)
-        ttk.Button(self.root, text="Download Selected Video", command=self.download_selected).pack(expand=True)
+        ttk.Button(self.root, text="Download Selected Video", command=self.show_server_selection).pack(expand=True)
 
     def display_videos(self, videos):
         for item in self.treeview.get_children():
@@ -156,17 +154,36 @@ class VideoDownloaderGUI:
             servers_info = ", ".join(info['servers'])
             self.treeview.insert('', 'end', iid=video, text=video, values=(info['size'], servers_info))
 
-    def download_selected(self):
+    def show_server_selection(self):
         selected_item = self.treeview.selection()
         if selected_item:
             video_name = self.treeview.item(selected_item[0])['text']
-            threading.Thread(target=lambda: self.client.request_video_download(video_name)).start()
+            servers = self.client.videos[video_name]['servers']
+            self.server_selection_popup(video_name, servers)
         else:
             messagebox.showwarning("Warning", "Please select a video to download.")
 
-    def update_videos(self):
-        """Llamada manual para actualizar la lista de videos."""
-        threading.Thread(target=self.client.connect_to_server).start()
+    def server_selection_popup(self, video_name, servers):
+        popup = tk.Toplevel(self.root)
+        popup.title(f"Select Servers for {video_name}")
+
+        screen_width = popup.winfo_screenwidth()
+        screen_height = popup.winfo_screenheight()
+
+        popup_width = 300
+        popup_height = 200
+
+        pos_x = (screen_width // 2) - (popup_width // 2)
+        pos_y = (screen_height // 2) - (popup_height // 2)
+
+        popup.geometry(f"{popup_width}x{popup_height}+{pos_x}+{pos_y}")
+
+        server_vars = []
+        for server in servers:
+            var = tk.BooleanVar()
+            chk = tk.Checkbutton(popup, text=server, variable=var)
+            chk.pack(anchor='w')
+            server_vars.append(var)
 
     def setup_progress_bars(self, video_name, num_parts, sizes):
         progress_bars = []
