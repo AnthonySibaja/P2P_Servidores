@@ -1,9 +1,10 @@
 import socket
 import threading
 import time
+import argparse
 
 class MainServer:
-    def __init__(self, host='192.168.50.197', port=8001):
+    def __init__(self, host='0.0.0.0', port=8001):
         self.host = host
         self.port = port
         self.active_video_servers = {}
@@ -55,7 +56,7 @@ class MainServer:
 
             # Agregar el servidor con los videos actuales
             for video_name, info in new_videos.items():
-                if video_name in self.active_video_servers:
+                if (video_name in self.active_video_servers):
                     self.active_video_servers[video_name].append({'host': host, 'port': port, 'details': info})
                 else:
                     self.active_video_servers[video_name] = [{'host': host, 'port': port, 'details': info}]
@@ -109,6 +110,11 @@ class MainServer:
         print("--- End ---\n")
 
 if __name__ == "__main__":
-    port = 8001
-    main_server = MainServer(port=port)
+    parser = argparse.ArgumentParser(description='Start the Main Server.')
+    parser.add_argument('--host', type=str, default='0.0.0.0', help='Host IP address to bind the server to.')
+    parser.add_argument('--port', type=int, default=8001, help='Port to bind the server to.')
+    args = parser.parse_args()
+
+    main_server = MainServer(host=args.host, port=args.port)
     main_server.start()
+
