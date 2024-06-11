@@ -98,7 +98,7 @@ class MainServer:
                         else:
                             self.log(f"Error en servidor {server['host']}:{server['port']}: {e}, intentos fallidos: {server['intentos_fallidos']}", header="Server Error")
                     else:
-                        server['intentos_fallidos'] = 0
+                        server['intentos_fallidos'] = 0  # Reset on successful response
                     finally:
                         s.close()
                 if not servers:
