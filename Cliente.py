@@ -4,6 +4,7 @@ import socket
 import threading
 import os
 import time
+import argparse
 
 class P2PClient:
     def __init__(self, gui, server_ip='192.168.50.197', server_port=8001):
@@ -222,9 +223,14 @@ class VideoDownloaderGUI:
         return progress_bars, top
 
 def main():
+    parser = argparse.ArgumentParser(description='Start the P2P Video Downloader Client.')
+    parser.add_argument('--server-ip', type=str, default='192.168.50.197', help='Server IP address to connect to.')
+    parser.add_argument('--server-port', type=int, default=8001, help='Server port to connect to.')
+    args = parser.parse_args()
+
     root = tk.Tk()
     gui = VideoDownloaderGUI(root)
-    client = P2PClient(gui)
+    client = P2PClient(gui, server_ip=args.server_ip, server_port=args.server_port)
     gui.client = client
 
     # Inicia la actualización automática cada 5 segundos
