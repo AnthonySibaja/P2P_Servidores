@@ -15,6 +15,7 @@ class VideoServer:
         self.videos = self.load_videos()
         self.server_active = True
         self.pong_count = 0  # Contador para visualizar los 'pong'
+        self.main_server_retries = 0
 
     def load_videos(self):
         return [(f, os.path.getsize(os.path.join(self.video_directory, f)))
@@ -25,7 +26,7 @@ class VideoServer:
         self.socket.bind((self.host, self.port))
         self.socket.listen()
         print(f"Video Server listening on {self.host}:{self.port}")
-        self.register_with_main_server()
+        threading.Thread(target=self.monitor_main_server).start()
         threading.Thread(target=self.monitor_video_directory).start()
 
         try:
@@ -43,8 +44,10 @@ class VideoServer:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((self.server_ip, self.server_port))
                 sock.sendall(message.encode())
+                self.main_server_retries = 0  # Reset the retry counter on successful connection
         except Exception as e:
             print(f"\nFailed to connect to main server: {e}")
+            self.main_server_retries += 1
 
     def handle_client(self, client_socket, address):
         while True:
@@ -92,7 +95,7 @@ class VideoServer:
 
     def monitor_video_directory(self):
         last_known_videos = set(self.videos)
-        while True:
+        while self.server_active:
             current_videos = set(self.load_videos())
             if current_videos != last_known_videos:
                 self.update_main_server_with_videos(current_videos)
@@ -107,8 +110,19 @@ class VideoServer:
                 sock.connect((self.server_ip, self.server_port))
                 sock.sendall(message.encode())
                 print(f"Updated main server with new video list: {videos}")
+                self.main_server_retries = 0  # Reset the retry counter on successful update
         except Exception as e:
             print(f"Failed to connect to main server for update: {e}")
+            self.main_server_retries += 1
+
+    def monitor_main_server(self):
+        while self.server_active:
+            self.register_with_main_server()
+            if self.main_server_retries >= 3:
+                print("Main server is down. Pausing video server.")
+                self.server_active = False
+                break
+            time.sleep(10)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Video Server")
