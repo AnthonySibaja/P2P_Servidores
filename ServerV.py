@@ -15,7 +15,7 @@ class VideoServer:
         self.videos = self.load_videos()
         self.server_active = True
         self.pong_count = 0  # Contador para visualizar los 'pong'
-        self.main_server_retries = 0
+        self.last_pong_time = time.time()  # Tiempo de la última respuesta de pong
 
     def load_videos(self):
         return [(f, os.path.getsize(os.path.join(self.video_directory, f)))
@@ -26,8 +26,9 @@ class VideoServer:
         self.socket.bind((self.host, self.port))
         self.socket.listen()
         print(f"Video Server listening on {self.host}:{self.port}")
-        threading.Thread(target=self.monitor_main_server).start()
+        self.register_with_main_server()
         threading.Thread(target=self.monitor_video_directory).start()
+        threading.Thread(target=self.check_main_server_connection).start()
 
         try:
             while self.server_active:
@@ -44,10 +45,8 @@ class VideoServer:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect((self.server_ip, self.server_port))
                 sock.sendall(message.encode())
-                self.main_server_retries = 0  # Reset the retry counter on successful connection
         except Exception as e:
             print(f"\nFailed to connect to main server: {e}")
-            self.main_server_retries += 1
 
     def handle_client(self, client_socket, address):
         while True:
@@ -65,6 +64,7 @@ class VideoServer:
 
     def display_pong_progress(self):
         self.pong_count = (self.pong_count + 1) % 5
+        self.last_pong_time = time.time()  # Actualizar el tiempo de la última respuesta de pong
         sys.stdout.write(f"\r{'Conexion' + '.' * self.pong_count}{' ' * (10 - self.pong_count)}")
         sys.stdout.flush()
 
@@ -80,7 +80,6 @@ class VideoServer:
             part_size = file_size // total_parts
             start_byte = part_index * part_size
             end_byte = start_byte + part_size if part_index < total_parts - 1 else file_size
-
             with open(video_path, 'rb') as file:
                 file.seek(start_byte)
                 while start_byte < end_byte:
@@ -92,7 +91,6 @@ class VideoServer:
                 client_socket.sendall(END_OF_DATA_MARKER.encode())
         else:
             print(f"Video file {video_name} not found.")
-
     def monitor_video_directory(self):
         last_known_videos = set(self.videos)
         while self.server_active:
@@ -110,17 +108,16 @@ class VideoServer:
                 sock.connect((self.server_ip, self.server_port))
                 sock.sendall(message.encode())
                 print(f"Updated main server with new video list: {videos}")
-                self.main_server_retries = 0  # Reset the retry counter on successful update
         except Exception as e:
             print(f"Failed to connect to main server for update: {e}")
-            self.main_server_retries += 1
 
-    def monitor_main_server(self):
+    def check_main_server_connection(self):
         while self.server_active:
-            self.register_with_main_server()
-            if self.main_server_retries >= 3:
-                print("Main server is down. Pausing video server.")
+            current_time = time.time()
+            if current_time - self.last_pong_time > 30:
+                print("\nMain server is down. Pausing video server.")
                 self.server_active = False
+                self.socket.close()
                 break
             time.sleep(10)
 
@@ -131,9 +128,7 @@ if __name__ == "__main__":
     parser.add_argument("video_directory", type=str, help="Directory containing video files")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host IP address of the video server")
     parser.add_argument("--port", type=int, default=9000, help="Port of the video server")
-
     args = parser.parse_args()
-
     video_server = VideoServer(
         server_ip=args.main_server_ip,
         server_port=args.main_server_port,
